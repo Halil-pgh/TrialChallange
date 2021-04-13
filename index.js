@@ -155,21 +155,21 @@ class Player {
 
             if (this.y < gameObject.y + gameObject.height && this.y + this.height > gameObject.y) {
                 if (this.x + this.width + this.vel > gameObject.x && this.x < gameObject.x) {
-                    // this.right = false;
+                    this.right = false;
                     this.addVelocity(-this.vel, 0);
                 }
                 if (this.x - this.vel < gameObject.x + gameObject.width && this.x > gameObject.x) {
-                    // this.left = false;
+                    this.left = false;
                     this.addVelocity(this.vel, 0);
                 }
             }
             if (this.x < gameObject.x + gameObject.width && this.x + this.width > gameObject.x) {
                 if (this.y + this.height + this.vel > gameObject.y && this.y < gameObject.y) {
-                    // this.down = false;
+                    this.down = false;
                     this.addVelocity(0, -this.vel);
                 }
                 if (this.y - this.vel < gameObject.y + gameObject.height && this.y > gameObject.y) {
-                    // this.up = false;
+                    this.up = false;
                     this.addVelocity(0, this.vel);
                 }
             }
