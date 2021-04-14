@@ -1,6 +1,12 @@
 class Utils {
     static gameOver = false;
+    static startGame = false;
     static score = 0;
+
+    static reset() {
+        Utils.gameOver = false;
+        Utils.score = 0;
+    }
 
     static makeImage(src) {
         let image = new Image();
@@ -26,6 +32,40 @@ class Keyboard {
     }
 }
 
+class Mouse {
+    static mouseX = 0;
+    static mouseY = 0;
+    static isPressed = false;
+
+    static init() {
+        document.addEventListener("mousemove", event => {
+            Mouse.mouseX = event.clientX;
+            Mouse.mouseY = event.clientY;
+        });
+
+        document.addEventListener("mousedown", event => {
+            Mouse.mouseX = event.clientX;
+            Mouse.mouseY = event.clientY;
+            Mouse.isPressed = true;
+        });
+
+        document.addEventListener("mouseup", event => {
+            Mouse.isPressed = false;
+        });
+    }
+
+    static isMousePressed() {
+        return Mouse.isPressed;
+    }
+
+    static getMousePos() {
+        return {
+            x: Mouse.mouseX,
+            y: Mouse.mouseY
+        };
+    }
+}
+
 class Scene {
     constructor(name) {
         this.gameObjects = new Array();
@@ -46,6 +86,10 @@ class Scene {
         if (index > -1) {
             this.gameObjects.splice(index, 1);
         }
+    }
+
+    reset() {
+        this.gameObjects = new Array();
     }
 
     update() {
@@ -112,14 +156,18 @@ class PowerBar {
     constructor() {
         this.width = 200;
         this.height = 30;
-        this.x = (canvas.width - this.width) / 2;
-        this.y = canvas.height - (canvas.height - this.height) / 6;
+        this.x = (canvas.width - this.width) / 2 + 100;
+        this.y = (canvas.height - this.height) / 6 - 50;
         this.power = 0;
         this.powerSpeed = 0.1;
         this.zeroPower = false;
 
         this.onPower = false;
         this.scene = null;
+    }
+
+    static reset() {
+        PowerBar.instance = new PowerBar();
     }
 
     static getInstance() {
@@ -326,10 +374,58 @@ class Background {
     }
 }
 
+class Button {
+    constructor(text, x, y, width, height) {
+        this.text = text;
+        this.x = x;
+        this.y = y;
+        this.color = new Color(150, 150, 0);
+        this.width = width;
+        this.height = height;
+        this.scene = null;
+    }
+
+    isPressed() {
+        if (Mouse.isMousePressed()) {
+            let mousePos = Mouse.getMousePos();
+            if (mousePos.x > this.x && mousePos.x < this.x + this.width) {
+                if (mousePos.y > this.y && mousePos.y < this.y + this.height) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    setScene(scene) {
+        this.scene = scene;
+    }
+
+    update() {
+        let mousePos = Mouse.getMousePos();
+        if (mousePos.x > this.x && mousePos.x < this.x + this.width) {
+            if (mousePos.y > this.y && mousePos.y < this.y + this.height) {
+                this.color = new Color(100, 100, 0);
+            }
+        } else {
+            this.color = new Color(150, 150, 0);
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color.toString();
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillStyle = "white"
+        ctx.font = "30px Arial";
+        ctx.fillText(this.text, this.x + this.width / 4, this.y + this.height / 4 + 20);
+    }
+}
+
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     Keyboard.init();
+    Mouse.init();
 
     let sceneManager = SceneManager.getInstance();
     let gameScene = sceneManager.add("Game");
@@ -338,12 +434,28 @@ window.onload = () => {
     gameScene.add(new Wall(canvas.width, canvas.height / 2 - 25, 50, 50));
     gameScene.add(PowerBar.getInstance());
 
+    let againButton = new Button("Try again", (canvas.width - 200) / 2, (canvas.height - 50) / 2, 200, 50);
+
     let lastTime = Date.now();
     let deltaTime = 0;
 
     setInterval(() => {
         if (Utils.gameOver) {
-            return;
+            PowerBar.reset();
+            gameScene.reset();
+
+            gameScene.add(againButton);
+
+            if (againButton.isPressed()) {
+                gameScene.add(new Background());
+                gameScene.add(new Player(100, canvas.height / 2 - 32));
+                gameScene.add(new Wall(canvas.width, canvas.height / 2 - 25, 50, 50));
+                gameScene.add(PowerBar.getInstance());
+
+                lastTime = Date.now();
+                deltaTime = 0;
+                Utils.reset();
+            }
         }
 
         let now = Date.now();
@@ -352,12 +464,12 @@ window.onload = () => {
             gameScene.add(new Wall(canvas.width, Math.floor(Math.random() * (canvas.height - 50)) + 25, 50, 50));
             deltaTime = 0;
         }
-        
+
         sceneManager.update();
         sceneManager.draw(ctx);
 
         ctx.fillStyle = "white"
         ctx.font = "30px Arial";
-        ctx.fillText("SCORE: " + Utils.score, 10, 50); 
+        ctx.fillText("SCORE: " + Utils.score, 10, 50);
     });
 }
