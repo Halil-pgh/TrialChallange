@@ -135,7 +135,7 @@ class PowerBar {
     }
 
     update() {
-        if (Keyboard.isKeyPressed(' ')) {
+        if (Keyboard.isKeyPressed('P')) {
             this.onPower = true;
         } else {
             this.onPower = false;
