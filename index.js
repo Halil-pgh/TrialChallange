@@ -106,6 +106,64 @@ class SceneManager {
     }
 }
 
+class PowerBar {
+    static instance = new PowerBar();
+
+    constructor() {
+        this.width = 200;
+        this.height = 30;
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height - (canvas.height - this.height) / 6;
+        this.power = 0;
+        this.powerSpeed = 0.1;
+        this.zeroPower = false;
+
+        this.onPower = false;
+        this.scene = null;
+    }
+
+    static getInstance() {
+        return this.instance;
+    }
+
+    setScene(scene) {
+        this.scene = scene;
+    }
+
+    isOnPower() {
+        return this.onPower;
+    }
+
+    update() {
+        if (Keyboard.isKeyPressed(' ')) {
+            this.onPower = true;
+        } else {
+            this.onPower = false;
+        }
+
+        if (this.onPower) {
+            let resPower = this.power - this.powerSpeed * 2;
+            if (resPower > 0) {
+                this.power = resPower;
+            } else {
+                this.onPower = false;
+            }
+        } else {
+            this.power += this.powerSpeed;
+            if (this.power >= this.width) {
+                this.power -= this.powerSpeed;
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillStyle = "blue";
+        ctx.fillRect(this.x, this.y, this.power, this.height);
+    }
+}
+
 class Player {
     constructor(x, y) {
         this.x = x;
@@ -149,7 +207,7 @@ class Player {
         for (let i = 0; i < gameObjects.length; i++) {
             let gameObject = gameObjects[i];
 
-            if (gameObject === this) {
+            if (!(gameObject instanceof Wall)) {
                 continue;
             }
 
@@ -178,6 +236,12 @@ class Player {
 
     update() {
         this.checkCollision();
+
+        if (PowerBar.getInstance().isOnPower()) {
+            this.vel = 2;
+        } else {
+            this.vel = 1;
+        }
 
         if (Keyboard.isKeyPressed('A') && this.left) {
             this.addVelocity(-this.vel, 0);
@@ -222,6 +286,46 @@ class Wall {
     }
 }
 
+class Color {
+    constructor(r, g, b) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
+
+    toString() {
+        return "rgb(" + this.r + ", " + this.g + ", " + this.b + ")";
+    }
+}
+
+class Background {
+    constructor() {
+        this.color = new Color(0, 0, 0);
+        this.change = 1;
+        this.scene = null;
+    }
+
+    setScene(scene) {
+        this.scene = scene;
+    }
+
+    update() {
+        if (PowerBar.getInstance().isOnPower()) {
+            this.color.r += this.change;
+            if (this.color.r > 255 || this.color.r < 0) {
+                this.change *= -1;
+            }
+        } else {
+            this.color = new Color(0, 0, 0);
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color.toString();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -229,8 +333,10 @@ window.onload = () => {
 
     let sceneManager = SceneManager.getInstance();
     let gameScene = sceneManager.add("Game");
+    gameScene.add(new Background());
     gameScene.add(new Player(100, canvas.height / 2 - 32));
     gameScene.add(new Wall(canvas.width, canvas.height / 2 - 25, 50, 50));
+    gameScene.add(PowerBar.getInstance());
 
     let lastTime = Date.now();
     let deltaTime = 0;
@@ -242,10 +348,6 @@ window.onload = () => {
 
         let now = Date.now();
         deltaTime += now - lastTime;
-
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         if (deltaTime > 1000 * 1000) {
             gameScene.add(new Wall(canvas.width, Math.floor(Math.random() * (canvas.height - 50)) + 25, 50, 50));
             deltaTime = 0;
